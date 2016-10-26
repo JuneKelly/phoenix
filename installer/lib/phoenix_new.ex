@@ -129,6 +129,8 @@ defmodule Mix.Tasks.Phoenix.New do
     * `--binary-id` - use `binary_id` as primary key type
       in ecto models
 
+    * `--yarn` - use the `yarn` package manager for node
+
   ## Examples
 
       mix phoenix.new hello_world
@@ -144,7 +146,7 @@ defmodule Mix.Tasks.Phoenix.New do
   """
   @switches [dev: :boolean, brunch: :boolean, ecto: :boolean,
              app: :string, module: :string, database: :string,
-             binary_id: :boolean, html: :boolean]
+             binary_id: :boolean, html: :boolean, yarn: :boolean]
 
   def run([version]) when version in ~w(-v --version) do
     Mix.shell.info "Phoenix v#{@version}"
@@ -184,6 +186,10 @@ defmodule Mix.Tasks.Phoenix.New do
     ecto = Keyword.get(opts, :ecto, true)
     html = Keyword.get(opts, :html, true)
     brunch = Keyword.get(opts, :brunch, true)
+    node_package_manager = case Keyword.get(opts, :yarn) do
+      true -> "yarn"
+      _    -> "npm"
+    end
     phoenix_path = phoenix_path(path, Keyword.get(opts, :dev, false))
 
     # We lowercase the database name because according to the
@@ -246,7 +252,7 @@ defmodule Mix.Tasks.Phoenix.New do
 
     File.cd!(path, fn ->
       mix?    = install_mix(install?)
-      brunch? = install_brunch(install?)
+      brunch? = install_brunch(install?, node_package_manager)
       extra   = if mix?, do: [], else: ["$ mix deps.get"]
 
       print_mix_info(path, extra)
@@ -323,9 +329,10 @@ defmodule Mix.Tasks.Phoenix.New do
     end
   end
 
-  defp install_brunch(install?) do
-    maybe_cmd "npm install && node node_modules/brunch/bin/brunch build",
-              File.exists?("brunch-config.js"), install? && System.find_executable("npm")
+  defp install_brunch(install?, node_package_manager) do
+    maybe_cmd "#{node_package_manager} install && node node_modules/brunch/bin/brunch build",
+              File.exists?("brunch-config.js"),
+              install? && System.find_executable(node_package_manager)
   end
 
   defp install_mix(install?) do
